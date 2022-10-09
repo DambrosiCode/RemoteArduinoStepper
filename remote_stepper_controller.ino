@@ -6,14 +6,15 @@
 
 //STEPPER STUFF ----
 //stepper movement
-float stepsPerRevolution = 5;           //min 5
-int speed = 5000 / stepsPerRevolution;  //max 1000
+float stepsPerRevolution = .8;        //*100
+int speed = 50 / stepsPerRevolution;  //max 1000
 float focusAmount = 0;
+
 
 
 // Creates an instance of stepper class
 // Pins entered in sequence IN1-IN3-IN2-IN4 for proper step sequence
-Stepper myStepper = Stepper(stepsPerRevolution, 8, 10, 9, 11);
+Stepper myStepper = Stepper(stepsPerRevolution * 100, 8, 10, 9, 11);
 
 //IR STUFF ----
 // IR reciever pin
@@ -58,7 +59,7 @@ void updateDisplay() {
   oled.setCursor(0, 0);
   oled.println("Focus Amount " + String(focusAmount));
   oled.setCursor(0, 2);
-  oled.println("Focus Change " + String(stepsPerRevolution / 100));
+  oled.println("Focus Steps " + String(stepsPerRevolution));
 }
 
 void loop() {
@@ -75,11 +76,11 @@ void loop() {
 
         //move stepper
         myStepper.setSpeed(speed);
-        myStepper.step(stepsPerRevolution);
+        myStepper.step(stepsPerRevolution * 100);
         Serial.println(">>|");
 
         //update display
-        focusAmount = focusAmount + stepsPerRevolution / 100;  //approx 5x20steps = one notch
+        focusAmount += stepsPerRevolution;  //approx 5x20steps = one notch
         updateDisplay();
 
         break;
@@ -92,52 +93,36 @@ void loop() {
 
         //move stepper
         myStepper.setSpeed(speed);
-        myStepper.step(-stepsPerRevolution);
-        Serial.println("|<<");
+        myStepper.step(-stepsPerRevolution * 100);
+        Serial.println(">>|");
 
+
+        focusAmount -= stepsPerRevolution;  //approx 5x20steps = one notch
         //update display
-        focusAmount = focusAmount - stepsPerRevolution / 100;  //approx 5x20steps = one notch
         updateDisplay();
 
         break;
+
       //EQ or New Step Int (visualized on screen as a float)
+      //If pressed user inputs numbers on remote for new step count
       case 0XFF906F:
-      //0
-      case 0XFF6897:
-        stepsPerRevolution = 0;
-        //update display
-        updateDisplay();
-        break;
-      //1
-      case 0XFF30CF:
-        stepsPerRevolution = 20;
-        //update display
-        updateDisplay();
-        break;
-      //2
-      case 0XFF18E7:
-        break;
-      //3
-      case 0XFF7A85:
-        break;
-      //4
-      case 0XFF10EF:
-        break;
-      //5
-      case 0XFF38C7:
-        break;
-      //6
-      case 0XFF5AA5:
-        break;
-      //7
-      case 0XFF42BD:
-        break;
-      //8
-      case 0XFF4AB5:
-        break;
-      //9
-      case 0XFF52AD:
-        break;
+        oled.setCursor(0, 4);
+        oled.println("NEW FOCUS STEPS");
+
+        while (stepsPerRevolution < 10.00) {  //while stepsPerRevolution are less than 1 keep adding
+          if (irrecv.decode(&results)) {      //if button is pressed switch case
+            switch (results.value) {
+              //BUTTON - 1
+              case 0XFF30CF:
+                stepsPerRevolution += 1.00;  //adds 1.00 to stepsPerRevolution float
+                //update display
+                updateDisplay();
+                break;
+            }
+            key_value = results.value;
+            irrecv.resume();
+          }
+        }
     }
     key_value = results.value;
     irrecv.resume();
