@@ -6,11 +6,11 @@
 
 //STEPPER STUFF ----
 //stepper movement
-float stepsPerRevolution = .8;        //*100
-int speed = 50 / stepsPerRevolution;  //max 1000
+float stepsPerRevolution = 1.00;        //*100
+float speed = 50 / stepsPerRevolution;  //max 1000
 float focusAmount = 0;
 
-
+String newStepsPerRevolution = String(stepsPerRevolution);
 
 // Creates an instance of stepper class
 // Pins entered in sequence IN1-IN3-IN2-IN4 for proper step sequence
@@ -62,6 +62,14 @@ void updateDisplay() {
   oled.println("Focus Steps " + String(stepsPerRevolution));
 }
 
+void updateSPR(String button) {
+  newStepsPerRevolution += button;  //adds 1.00 to newStepsPerRevolution
+  float sprValue = newStepsPerRevolution.toFloat()/100;
+  //update display
+  oled.setCursor(0, 4);
+  oled.println("NEW FOCUS STEPS: " + String(sprValue));
+}
+
 void loop() {
   if (irrecv.decode(&results)) {
     //if results repeat in value
@@ -107,22 +115,62 @@ void loop() {
       //If pressed user inputs numbers on remote for new step count
       case 0XFF906F:
         oled.setCursor(0, 4);
-        oled.println("NEW FOCUS STEPS");
+        oled.println("NEW FOCUS STEPS: " + newStepsPerRevolution);
+        newStepsPerRevolution = "";
 
-        while (stepsPerRevolution < 10.00) {  //while stepsPerRevolution are less than 1 keep adding
-          if (irrecv.decode(&results)) {      //if button is pressed switch case
+        while (newStepsPerRevolution.length() < 3) {  //while length of newStepsPerRevolution are less than 4 keep adding
+          if (irrecv.decode(&results)) {              //if button is pressed switch case
             switch (results.value) {
-              //BUTTON - 1
+              //BUTTON - 0
+              case 0XFF6897:
+                updateSPR("0");
+                break;
+                //BUTTON - 1
               case 0XFF30CF:
-                stepsPerRevolution += 1.00;  //adds 1.00 to stepsPerRevolution float
-                //update display
-                updateDisplay();
+                updateSPR("1");
+                break;
+                //BUTTON - 2
+              case 0XFF18E7:
+                updateSPR("2");
+                break;
+                //BUTTON - 3
+              case 0XFF7A85:
+                updateSPR("3");
+                break;
+                //BUTTON - 4
+              case 0XFF10EF:
+                updateSPR("4");
+                break;
+                //BUTTON - 5
+              case 0XFF38C7:
+                updateSPR("5");
+                break;
+                //BUTTON - 6
+              case 0XFF5AA5:
+                updateSPR("6");
+                break;
+                //BUTTON - 7
+              case 0XFF42BD:
+                updateSPR("7");
+                break;
+                //BUTTON - 8
+              case 0XFF4AB5:
+                updateSPR("8");
+                break;
+                //BUTTON - 9
+              case 0XFF52AD:
+                updateSPR("9");
                 break;
             }
             key_value = results.value;
             irrecv.resume();
           }
         }
+        //after the while loop
+        oled.setCursor(0, 4);
+        oled.clear();
+        stepsPerRevolution = newStepsPerRevolution.toFloat() / 100;
+        updateDisplay();
     }
     key_value = results.value;
     irrecv.resume();
