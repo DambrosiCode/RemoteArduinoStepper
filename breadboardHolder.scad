@@ -15,14 +15,14 @@ module dcHolder(){
 //breadboard holder
 difference(){
     union(){
-      cube([82, 45, 2.5], center=true);
+      cube([82, 82, 2.5], center=true);
         difference(){
             difference(){
                 
                 rotate([90,0,0])
-                cylinder(20,41,41, center=true);
+                #cylinder(20,41,41, center=true);
                 translate([0,0,22.5])
-                cube([82, 45, 43], center=true);
+                cube([82, 82, 43], center=true);
             };
             rotate([90,0,0])
             translate([0,-40,0])
@@ -51,6 +51,10 @@ translate([-25,0,-76])
 rotate([0,-45,0])
 cube([10,10,2], center=true);
 
+
+translate([-29,-33,7.5])
+rotate([0,0,90])
+dcHolder();
 
 
 
