@@ -20,7 +20,7 @@ difference(){
             difference(){
                 
                 rotate([90,0,0])
-                #cylinder(20,41,41, center=true);
+                cylinder(20,41,41, center=true);
                 translate([0,0,22.5])
                 cube([82, 82, 43], center=true);
             };
@@ -52,24 +52,7 @@ rotate([0,-45,0])
 cube([10,10,2], center=true);
 
 
-translate([-29,-33,7.5])
-rotate([0,0,90])
+translate([-33,28,7.5])
+rotate([0,0,0])
 dcHolder();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
