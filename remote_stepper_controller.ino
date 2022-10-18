@@ -1,29 +1,33 @@
 #include "SSD1306Ascii.h"
 #include "SSD1306AsciiAvrI2c.h"
 #include <IRremote.h>
-#include <Stepper.h>
 #include <Wire.h>
+//-- STEPPER STUFF
+float steps = 500;
 
-//STEPPER STUFF ----
-//stepper movement
-float stepsPerRevolution = 1.00;        //*100
-float speed = 50 / stepsPerRevolution;  //max 1000
-float focusAmount = 0;
+const float stepPerRev = 3200;
 
-String newStepsPerRevolution = String(stepsPerRevolution);
+float degrees = (steps / stepPerRev) * 360;
+float stepsDistance = 0;
 
-// Creates an instance of stepper class
-// Pins entered in sequence IN1-IN3-IN2-IN4 for proper step sequence
-Stepper myStepper = Stepper(stepsPerRevolution * 100, 8, 10, 9, 11);
+String newStepDegrees = "";  //temp holds when user is inputting steps on remote
 
-//IR STUFF ----
+// defines pins numbers
+const int stepPin = 3;
+const int dirPin = 2;
+
+const int ms_one = 7;
+const int ms_two = 8;
+const int ms_three = 9;
+
+//--- IR STUFF
 // IR reciever pin
-const int RECV_PIN = 7;
+const int RECV_PIN = 5;
 IRrecv irrecv(RECV_PIN);
 decode_results results;
 unsigned long key_value = 0;
 
-//OLED STUFF
+//-- OLED STUFF
 // 0X3C+SA0 - 0x3C or 0x3D
 #define I2C_ADDRESS 0x3C
 
@@ -31,14 +35,15 @@ unsigned long key_value = 0;
 #define RST_PIN -1
 
 SSD1306AsciiAvrI2c oled;
-//------------------------------------------------------------------------------
+
+// -------------------------------------------
 void setup() {
-  //initialize IR reading
+  //init IR reading
   Serial.begin(9600);
   irrecv.enableIRIn();
   irrecv.blink13(true);
 
-  //init oled
+//init oled
 #if RST_PIN >= 0
   oled.begin(&Adafruit128x64, I2C_ADDRESS, RST_PIN);
 #else   // RST_PIN >= 0
@@ -49,22 +54,60 @@ void setup() {
   oled.setFont(System5x7);
   oled.clear();
   oled.setCursor(0, 0);
-  oled.println("Focus Amount 0");
+  oled.println("Focus Amount " + String(degrees));
   oled.setCursor(0, 2);
-  oled.println("Focus Level 0");
+  oled.println("Focus Change " + String(stepsDistance));
+
+  //init stepper
+  // Sets the two pins as Outputs
+  pinMode(stepPin, OUTPUT);
+  pinMode(dirPin, OUTPUT);
+
+  // Sets the two pins as Outputs
+  pinMode(ms_one, OUTPUT);
+  pinMode(ms_two, OUTPUT);
+  pinMode(ms_three, OUTPUT);
+
+  digitalWrite(ms_one, HIGH);
+  digitalWrite(ms_two, HIGH);
+  digitalWrite(ms_three, HIGH);
 }
-//------------------------------------------------------------------------------
+
+void moveStepper(int steps, bool forward) {
+  if (forward) {
+    digitalWrite(dirPin, HIGH);  // Enables the motor to move in a particular direction
+    // Makes 200 pulses for making one full cycle rotation
+    for (int x = 0; x < steps; x++) {
+      digitalWrite(stepPin, HIGH);
+      delayMicroseconds(500);
+      digitalWrite(stepPin, LOW);
+      delayMicroseconds(500);
+    }
+  } else {
+    digitalWrite(dirPin, LOW);  // Enables the motor to move in a particular direction
+    // Makes 200 pulses for making one full cycle rotation
+    for (int x = 0; x < steps; x++) {
+      digitalWrite(stepPin, HIGH);
+      delayMicroseconds(500);
+      digitalWrite(stepPin, LOW);
+      delayMicroseconds(500);
+    }
+  }
+}
+
 void updateDisplay() {
+  Serial.println(degrees);
+  Serial.println(steps);
   oled.clear();
   oled.setCursor(0, 0);
-  oled.println("Focus Amount " + String(focusAmount));
+  oled.println("Focus Amount " + String(degrees));
   oled.setCursor(0, 2);
-  oled.println("Focus Steps " + String(stepsPerRevolution));
+  oled.println("Focus Distance " + String(stepsDistance));
 }
 
 void updateSPR(String button) {
-  newStepsPerRevolution += button;  //adds 1.00 to newStepsPerRevolution
-  float sprValue = newStepsPerRevolution.toFloat()/100;
+  newStepDegrees += button;  //adds 1.00 to newStepDegrees
+  float sprValue = newStepDegrees.toFloat() / 100;
   //update display
   oled.setCursor(0, 4);
   oled.println("NEW FOCUS STEPS: " + String(sprValue));
@@ -78,48 +121,24 @@ void loop() {
     switch (results.value) {
       //>>|
       case 0XFF02FD:
-        //diplay
-        oled.clear();
-        oled.print(">>|");
-
-        //move stepper
-        myStepper.setSpeed(speed);
-        myStepper.step(stepsPerRevolution * 100);
-        Serial.println(">>|");
-
-        //update display
-        focusAmount += stepsPerRevolution;  //approx 5x20steps = one notch
+        moveStepper(steps, true);
+        stepsDistance += degrees;
         updateDisplay();
-
         break;
-
       //|<<
       case 0XFF22DD:
-        //diplay
-        oled.clear();
-        oled.print("|<<");
-
-        //move stepper
-        myStepper.setSpeed(speed);
-        myStepper.step(-stepsPerRevolution * 100);
-        Serial.println(">>|");
-
-
-        focusAmount -= stepsPerRevolution;  //approx 5x20steps = one notch
-        //update display
+        moveStepper(steps, false);
+        stepsDistance -= degrees;
         updateDisplay();
-
         break;
 
       //EQ or New Step Int (visualized on screen as a float)
-      //If pressed user inputs numbers on remote for new step count
       case 0XFF906F:
         oled.setCursor(0, 4);
-        oled.println("NEW FOCUS STEPS: " + newStepsPerRevolution);
-        newStepsPerRevolution = "";
-
-        while (newStepsPerRevolution.length() < 3) {  //while length of newStepsPerRevolution are less than 4 keep adding
-          if (irrecv.decode(&results)) {              //if button is pressed switch case
+        oled.println("NEW FOCUS STEPS: " + newStepDegrees);
+        newStepDegrees = "";
+        while (newStepDegrees.length() < 3) {  //while length of newStepDegrees are less than 4 keep adding
+          if (irrecv.decode(&results)) {       //if button is pressed switch case
             switch (results.value) {
               //BUTTON - 0
               case 0XFF6897:
@@ -169,7 +188,8 @@ void loop() {
         //after the while loop
         oled.setCursor(0, 4);
         oled.clear();
-        stepsPerRevolution = newStepsPerRevolution.toFloat() / 100;
+        steps = newStepDegrees.toFloat()*200/360;
+        degrees = (steps / stepPerRev) * 360;
         updateDisplay();
     }
     key_value = results.value;
