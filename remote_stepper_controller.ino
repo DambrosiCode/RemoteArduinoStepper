@@ -188,7 +188,7 @@ void loop() {
         //after the while loop
         oled.setCursor(0, 4);
         oled.clear();
-        steps = newStepDegrees.toFloat()*200/360;
+        steps = (newStepDegrees.toFloat()/100)*stepPerRev/360;
         degrees = (steps / stepPerRev) * 360;
         updateDisplay();
     }
